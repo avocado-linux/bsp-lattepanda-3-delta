@@ -1,0 +1,191 @@
+default_target: intel-x86-64-v2
+supported_targets:
+  - intel-x86-64-v2
+
+extensions:
+  avocado-bsp-lattepanda-3-delta:
+    version: 0.1.0
+    release: r0
+    summary: Board support for the LattePanda 3 Delta SBC
+    description: >
+      Standalone board support for the LattePanda 3 Delta single-board computer
+      (Intel Celeron N5105, Jasper Lake / x86-64-v2). Self-contained: it does
+      not depend on avocado-bsp-intel-x86-64-v2. Covers the Intel I226-V
+      2.5GbE port (igc), the AX201 Wi-Fi and Bluetooth, the UHD graphics and
+      HDMI/DP audio, the analog audio codec, the microSD slot (a Realtek USB
+      card reader), the onboard Leonardo co-processor (cdc_acm), the CMOS RTC,
+      the TPM, the PCH watchdog and thermal sensors, and the LPSS I2C/SPI/UART
+      controllers and GPIO pins on the headers.
+    license: Apache-2.0
+    url: https://github.com/avocado-linux/bsp-lattepanda-3-delta
+    vendor: Avocado Linux <info@avocadolinux.org>
+
+    types:
+      - sysext
+      - confext
+
+    # bluez5 ships bluetooth.service disabled.
+    enable_services:
+      - bluetooth.service
+
+    on_merge:
+      - udevadm control --reload
+      - udevadm trigger --type=subsystems --action=add --settle
+      - udevadm trigger --type=devices --action=add --settle
+
+    # A console getty on the VT (the base enables only serial-getty@ttyS0,
+    # which is the DB9 COM port on this board).
+    overlay: overlay
+
+    modprobe:
+      # The onboard NIC is an Intel I226-V although its MAC carries a Realtek
+      # OUI (00:e0:4c); it matches on PCI, but load it explicitly.
+      - igc
+      # Onboard LattePanda Leonardo ATmega32U4 co-processor -> /dev/ttyACM0.
+      - cdc_acm
+      # The PCH exposes several I2C controllers; i2c-dev publishes /dev/i2c-*.
+      - i2c-dev
+      # Without rtc_cmos there is no /dev/rtc and the clock is not restored
+      # across a power cycle.
+      - rtc_cmos
+
+    packages:
+      # ================= LattePanda 3 Delta specific =================
+
+      # --- Intel I226-V 2.5GbE port ---
+      kernel-module-igc: '*'
+
+      # --- Onboard Leonardo co-processor (USB CDC-ACM) -> /dev/ttyACM0 ---
+      kernel-module-cdc-acm: '*'
+
+      # --- I2C character devices (/dev/i2c-*), what i2c-tools drives ---
+      kernel-module-i2c-dev: '*'
+
+      # --- CMOS RTC (/dev/rtc, wall clock across power cycles) ---
+      kernel-module-rtc-cmos: '*'
+
+      # --- Intel Bluetooth firmware. btusb binds without it, but hci0 never
+      #     comes up: "Failed to load Intel firmware file intel/ibt-19-0-4.sfi" ---
+      linux-firmware-ibt: '*'
+
+      # --- Wi-Fi regulatory database (AX201). The kernel loads regulatory.db,
+      #     which only -static ships; plain wireless-regdb is the CRDA format
+      #     and leaves "failed to load regulatory.db" ---
+      wireless-regdb-static: '*'
+
+      # --- HD Audio codecs. Since 6.17 each Realtek and HDMI codec is its own
+      #     module. snd_hda_intel binds without them and creates no card. ---
+      kernel-module-snd-hda-intel: '*'
+      kernel-module-snd-hda-codec-alc269: '*'
+      kernel-module-snd-hda-codec-intelhdmi: '*'
+
+      # --- Jasper Lake platform: GPIO pins, the LPSS I2C/SPI/UART controllers
+      #     on the headers, the PCH watchdog, thermal and power telemetry, and
+      #     the ACPI buttons. They bind on PCI/ACPI match. Needs the meta-avocado
+      #     Intel platform kernel fragment (intel-platform.cfg). ---
+      kernel-module-pinctrl-jasperlake: '*'
+      kernel-module-intel-lpss-pci: '*'
+      kernel-module-idma64: '*'
+      kernel-module-i2c-designware-platform: '*'
+      kernel-module-spi-pxa2xx-platform: '*'
+      kernel-module-spidev: '*'
+      kernel-module-8250-dw: '*'
+      kernel-module-itco-wdt: '*'
+      kernel-module-wdat-wdt: '*'
+      kernel-module-intel-pch-thermal: '*'
+      kernel-module-x86-pkg-temp-thermal: '*'
+      kernel-module-int3400-thermal: '*'
+      kernel-module-intel-rapl-msr: '*'
+      kernel-module-intel-pmc-core: '*'
+      kernel-module-intel-hid: '*'
+      kernel-module-intel-vbtn: '*'
+
+      # --- microSD slot: a Realtek RTS5129 USB card reader ---
+      kernel-module-rtsx-usb: '*'
+      kernel-module-rtsx-usb-sdmmc: '*'
+
+      # --- Hardware video decode/encode (VA-API, iHD) and Vulkan (ANV) on the
+      #     UHD graphics ---
+      intel-media-driver: '*'
+      libva-utils: '*'
+      mesa-vulkan-drivers: '*'
+      vulkan-loader: '*'
+      vulkan-tools: '*'
+
+      # --- Userspace to configure and validate the radios, audio, I2C, GPIO
+      #     and watchdog this board exposes ---
+      iw: '*'
+      wpa-supplicant: '*'
+      bluez5: '*'
+      alsa-utils: '*'
+      i2c-tools: '*'
+      libgpiod-tools: '*'
+
+      # ================= Generic Intel x86-64 support =================
+
+      # --- Intel CPU microcode ---
+      intel-microcode: '*'
+
+      # --- Intel GPU firmware (DMC, GuC/HuC) ---
+      linux-firmware-i915: '*'
+
+      # --- WiFi firmware ---
+      linux-firmware-iwlwifi: '*'
+
+      # --- WiFi stack ---
+      kernel-module-cfg80211: '*'
+      kernel-module-mac80211: '*'
+      kernel-module-rfkill: '*'
+      kernel-module-iwlwifi: '*'
+      kernel-module-iwlmvm: '*'
+      kernel-module-ccm: '*'
+      kernel-module-ctr: '*'
+
+      # --- Bluetooth (Intel) ---
+      kernel-module-bluetooth: '*'
+      kernel-module-btusb: '*'
+      kernel-module-btintel: '*'
+
+      # --- Intel GPU driver (iGPU) ---
+      kernel-module-i915: '*'
+
+      # --- USB serial adapters ---
+      kernel-module-usbserial: '*'
+      kernel-module-ftdi-sio: '*'
+      kernel-module-pl2303: '*'
+      kernel-module-cp210x: '*'
+      kernel-module-ch341: '*'
+
+      # --- Network filtering (container support) ---
+      kernel-module-ip-tables: '*'
+      kernel-module-iptable-filter: '*'
+      kernel-module-iptable-nat: '*'
+      kernel-module-nf-nat: '*'
+      kernel-module-nf-conntrack: '*'
+      kernel-module-x-tables: '*'
+      kernel-module-xt-conntrack: '*'
+      kernel-module-xt-masquerade: '*'
+
+      # --- Filesystem ---
+      kernel-module-fuse: '*'
+
+      # --- Networking ---
+      kernel-module-sch-fq-codel: '*'
+      kernel-module-wireguard: '*'
+      kernel-module-tun: '*'
+      kernel-module-bridge: '*'
+
+      # --- Hardware monitoring ---
+      kernel-module-coretemp: '*'
+
+      # --- Userspace tools ---
+      efibootmgr: '*'
+      tpm2-tools: '*'
+      pciutils: '*'
+      usbutils: '*'
+      dmidecode: '*'
+      nvme-cli: '*'
+      smartmontools: '*'
+
+sdk:
+  image: docker.io/avocadolinux/sdk:{{ env.AVOCADO_DISTRO_RELEASE }}
