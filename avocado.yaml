@@ -14,7 +14,7 @@ extensions:
       2.5GbE port (igc), the AX201 Wi-Fi and Bluetooth, the UHD graphics and
       HDMI/DP audio, the analog audio codec, the microSD slot (a Realtek USB
       card reader), the onboard Leonardo co-processor (cdc_acm), the CMOS RTC,
-      the TPM, the PCH watchdog and thermal sensors, and the LPSS I2C/SPI/UART
+      the TPM, the PCH watchdog, the CPU package thermal sensors, and the LPSS I2C/SPI/UART
       controllers and GPIO pins on the headers.
     license: Apache-2.0
     url: https://github.com/avocado-linux/bsp-lattepanda-3-delta
@@ -92,7 +92,6 @@ extensions:
       kernel-module-8250-dw: '*'
       kernel-module-itco-wdt: '*'
       kernel-module-wdat-wdt: '*'
-      kernel-module-intel-pch-thermal: '*'
       kernel-module-x86-pkg-temp-thermal: '*'
       kernel-module-int3400-thermal: '*'
       kernel-module-intel-rapl-msr: '*'
